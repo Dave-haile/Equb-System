@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum EqubStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum RoundStatus {
+  PENDING
+  COLLECTING
+  PAID
+}
+
+enum ContributionStatus {
+  PENDING
+  PAID
+  LATE
+}
+
+model User {
+  id       Int     @id @default(autoincrement())
+  name     String
+  phone    String  @unique
+  email    String? @unique
+  password String
+  role     Role    @default(MEMBER)
+
+  createdEqubs  Equb[]         @relation("EqubCreator")
+  memberships   EqubMember[]
+  contributions Contribution[]
+  payouts       Payout[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rounds    Round[]
+}
+
+model Equb {
+  id                   Int        @id @default(autoincrement())
+  name                 String
+  description          String?
+  contributionGoldGram Decimal    @db.Decimal(10, 3)
+  frequency            String
+  totalMembers         Int
+  totalRounds          Int
+  startDate            DateTime
+  status               EqubStatus @default(PENDING)
+
+  creatorId Int
+  creator   User @relation("EqubCreator", fields: [creatorId], references: [id])
+
+  members       EqubMember[]
+  rounds        Round[]
+  contributions Contribution[]
+  payouts       Payout[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EqubMember {
+  id Int @id @default(autoincrement())
+
+  equbId Int
+  userId Int
+
+  equb Equb @relation(fields: [equbId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  joinDate DateTime @default(now())
+
+  payoutOrder Int
+  isActive    Boolean @default(true)
+
+  @@unique([equbId, userId])
+}
+
+model Round {
+  id Int @id @default(autoincrement())
+
+  equbId Int
+  equb   Equb @relation(fields: [equbId], references: [id], onDelete: Cascade)
+
+  roundNumber Int
+
+  receiverId Int
+  receiver   User @relation(fields: [receiverId], references: [id])
+
+  payoutGoldGram Decimal @db.Decimal(10, 3)
+
+  roundDate DateTime
+  status    RoundStatus @default(PENDING)
+
+  contributions Contribution[]
+  payout        Payout?
+
+  createdAt DateTime @default(now())
+
+  @@unique([equbId, roundNumber])
+}
+
+model Contribution {
+  id Int @id @default(autoincrement())
+
+  equbId  Int
+  roundId Int
+  userId  Int
+
+  equb  Equb  @relation(fields: [equbId], references: [id], onDelete: Cascade)
+  round Round @relation(fields: [roundId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  goldGram Decimal @db.Decimal(10, 3)
+
+  paymentDate DateTime?
+
+  status ContributionStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+
+  @@unique([roundId, userId])
+}
+
+model Payout {
+  id Int @id @default(autoincrement())
+
+  equbId     Int
+  roundId    Int @unique
+  receiverId Int
+
+  equb     Equb  @relation(fields: [equbId], references: [id])
+  round    Round @relation(fields: [roundId], references: [id])
+  receiver User  @relation(fields: [receiverId], references: [id])
+
+  totalGoldGram Decimal @db.Decimal(10, 3)
+
+  payoutDate DateTime
+  notes      String?
+
+  createdAt DateTime @default(now())
+}
+
+model GoldPrice {
+  id Int @id @default(autoincrement())
+
+  pricePerGram Decimal @db.Decimal(10, 2)
+  currency     String  @default("ETB")
+
+  recordedAt DateTime @default(now())
+}
