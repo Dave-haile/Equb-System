@@ -14,8 +14,8 @@ import {
 import { toast } from "sonner";
 
 export default function LoginPage() {
-  const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("0911000000");
+  const [password, setPassword] = useState("12345678");
   const [loading, setLoading] = useState(false);
 
   const { signIn } = useAuth();
